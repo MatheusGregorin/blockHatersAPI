@@ -129,5 +129,3 @@ internal/
 ```
 
 ---
-
-Se quiser, posso também gerar um conjunto de testes unitários/integrados ou adicionar endpoints para `Product` e `Merchant`.
