@@ -35,7 +35,7 @@ func main() {
 
 	r := gin.Default()
 	r.POST("/login", userHandler.Login)
-	r.POST("/register", userHandler.Register)
+	r.POST("/add", userHandler.Register)
 
 	// // Grupo de rotas protegidas
 	v1 := r.Group("/api/v1")
