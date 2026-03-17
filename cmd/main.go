@@ -34,11 +34,13 @@ func main() {
 	userHandler := handler.NewUserHandler(UserMysqlRepository)
 
 	r := gin.Default()
+	r.Use(middleware.CORSMiddleware())
+
 	r.POST("/login", userHandler.Login)
 
 	// // Grupo de rotas protegidas
 	v1 := r.Group("/api/v1")
-	v1.Use(middleware.AuthMiddleware())
+	v1.Use(middleware.AuthMiddleware()) // Cors aplica o middleware de autenticação para todas as rotas dentro deste grupo
 	{
 		v1.POST("/register", userHandler.Register)
 		v1.GET("/user/:id", userHandler.GetUserByID)
@@ -48,6 +50,7 @@ func main() {
 		c.JSON(404, gin.H{"error": "Rota não encontrada"})
 	})
 
-	fmt.Println("\nServidor rodando na porta 8083\n")
+	fmt.Println("Servidor rodando na porta 8083")
+
 	r.Run(":8083")
 }
