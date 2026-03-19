@@ -8,39 +8,63 @@ import (
 	"myMarket/internal/middleware"
 	"myMarket/internal/repository"
 	"os"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/ulule/limiter/v3"
+	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
 func main() {
 
+	// carregando .ENV
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Erro ao carregar o arquivo .env")
 	}
 
+	// Rate limiter configuration
+	rate := limiter.Rate{
+		Period: 1 * time.Second, // Período de tempo para o qual a taxa é calculada
+		Limit:  3,               // Qtd requisições permitidas por período
+	}
+	store := memory.NewStore()
+	instance := limiter.New(store, rate)
+	middlewareRateLimit := mgin.NewMiddleware(instance)
+
+	// Cors configuration
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"*"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
+
+	// Database connection
 	database.Connect()
 
-	// MYSQL - DEFAULT
-	UserMysqlRepository := repository.NewUserMysqlRepository()
-
+	// Bin Repository // MYSQL
+	UserRepository := repository.NewUserMysqlRepository()
 	repositoryType := os.Getenv("REPOSITORY")
 	if repositoryType == "postgres" {
-		// UserMysqlRepository = repository.NewUserMysqlRepositoryPostgres() // Implemente esta função para retornar um repositório PostgreSQL
+		// UserRepository = repository.NewUserRepositoryPostgres() // Implemente esta função para retornar um repositório PostgreSQL
 	}
+	userHandler := handler.NewUserHandler(UserRepository)
 
-	// Bindando o repositório ao handler
-	userHandler := handler.NewUserHandler(UserMysqlRepository)
-
+	// Init Gin
 	r := gin.Default()
-	r.Use(middleware.CORSMiddleware())
 
+	// Registro das configurações
+	r.Use(middlewareRateLimit)
+	r.Use(cors.New(config))
+
+	// Rota de autenticação
 	r.POST("/login", userHandler.Login)
 
 	// // Grupo de rotas protegidas
 	v1 := r.Group("/api/v1")
-	v1.Use(middleware.AuthMiddleware()) // Cors aplica o middleware de autenticação para todas as rotas dentro deste grupo
+	v1.Use(middleware.AuthMiddleware())
 	{
 		v1.POST("/register", userHandler.Register)
 		v1.GET("/user/:id", userHandler.GetUserByID)
