@@ -44,13 +44,23 @@ func main() {
 	// Database connection
 	database.Connect()
 
-	// Bin Repository // MYSQL
+	// Bin Repositories
+
+	// User Repository // MYSQL
 	UserRepository := repository.NewUserMysqlRepository()
 	repositoryType := os.Getenv("REPOSITORY")
 	if repositoryType == "postgres" {
 		// UserRepository = repository.NewUserRepositoryPostgres() // Implemente esta função para retornar um repositório PostgreSQL
 	}
 	userHandler := handler.NewUserHandler(UserRepository)
+
+	// Merchant Repository // MYSQL
+	MerchantRepository := repository.NewMerchantMysqlRepository()
+	merchantHandler := handler.NewMerchantHandler(MerchantRepository)
+
+	// Review Repository // MYSQL
+	ReviewRepository := repository.NewReviewMysqlRepository()
+	reviewHandler := handler.NewReviewHandler(ReviewRepository)
 
 	// Init Gin
 	r := gin.Default()
@@ -68,6 +78,10 @@ func main() {
 	{
 		v1.POST("/register", userHandler.Register)
 		v1.GET("/user/:id", userHandler.GetUserByID)
+		v1.GET("/users", userHandler.GetAllUsers)
+		v1.GET("/merchants", merchantHandler.GetAllMerchants)
+		v1.POST("/merchants", merchantHandler.CreateMerchant)
+		v1.GET("/reviews", reviewHandler.GetAllReviews)
 	}
 
 	r.NoRoute(func(c *gin.Context) {

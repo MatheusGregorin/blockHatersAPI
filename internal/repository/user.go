@@ -17,45 +17,41 @@ func NewUserMysqlRepository() *UserMysqlRepository {
 	return &UserMysqlRepository{}
 }
 
-func (ur *UserMysqlRepository) Register(username string, password string) (*models.User, error) {
-	var user models.User
+func (ur *UserMysqlRepository) Register(user *models.User) (*models.User, error) {
+	var existingUser models.User
 
-	result := database.DB.Where("username = ?", username).First(&user)
+	result := database.DB.Where("email = ?", user.Email).First(&existingUser)
 	if result.Error == nil {
-		return nil, fmt.Errorf("username already exists")
+		return nil, fmt.Errorf("email already exists")
 	}
 
-	hashPass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashPass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("error generating hash password")
 	}
 
-	// Verifica se a senha fornecida corresponde ao hash armazenado
-	if err := bcrypt.CompareHashAndPassword(hashPass, []byte(password)); err != nil {
-		return nil, fmt.Errorf("invalid password")
-	}
-
-	user.Username = username
 	user.Password = string(hashPass)
-	if err := database.DB.Create(&user).Error; err != nil {
+	if err := database.DB.Create(user).Error; err != nil {
 		return nil, err
 	}
 
 	user.Password = "" // Limpa a senha antes de retornar o usuário
 
-	return &user, nil
+	return user, nil
 }
 
-func (ur *UserMysqlRepository) Login(username string, password string) (string, error) {
+func (ur *UserMysqlRepository) Login(email string, password string) (string, error) {
 	var user models.User
 
-	result := database.DB.Where("username = ?", username).First(&user)
+	result := database.DB.Where("email = ?", email).First(&user)
 	if result.Error != nil {
 		return "", fmt.Errorf("user not found")
 	}
 
 	// Verifica se a senha fornecida corresponde ao hash armazenado
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		fmt.Printf("Erro ao verificar senha! Banco: [%s] | Recebido: [%s] | Erro: %v\n", user.Password, password, err)
 		return "", fmt.Errorf("invalid password")
 	}
 
@@ -84,4 +80,19 @@ func (ur *UserMysqlRepository) GetUserByID(id uint) (*models.User, error) {
 	user.Password = "" // Limpa a senha antes de retornar o usuário
 
 	return &user, nil
+}
+
+func (ur *UserMysqlRepository) GetAllUsers() ([]models.User, error) {
+	var users []models.User
+	result := database.DB.Preload("Merchant").Find(&users)
+	if result.Error != nil {
+		return nil, fmt.Errorf("could not fetch users")
+	}
+
+	// Limpa a senha de todos os usuários
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	return users, nil
 }

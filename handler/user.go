@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"myMarket/internal/interfaces"
+	"myMarket/internal/models"
 	"strconv"
 	"time"
 
@@ -10,8 +11,8 @@ import (
 )
 
 type LoginRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=20"`
-	Password string `json:"password" binding:"required,min=8,max=10"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8"`
 }
 
 type UserHandler struct {
@@ -25,14 +26,14 @@ func NewUserHandler(r interfaces.IUser) *UserHandler {
 }
 
 func (h *UserHandler) Register(ctx *gin.Context) {
-	var loginReq LoginRequest
+	var user models.User
 
-	if err := ctx.ShouldBindJSON(&loginReq); err != nil {
-		ctx.JSON(400, gin.H{"error": "Invalid request"})
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(400, gin.H{"error": "Invalid request: " + err.Error()})
 		return
 	}
 
-	userSaved, err := h.repo.Register(loginReq.Username, loginReq.Password)
+	userSaved, err := h.repo.Register(&user)
 	if err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -42,16 +43,16 @@ func (h *UserHandler) Register(ctx *gin.Context) {
 		"message": "User registered successfully",
 		"user":    userSaved,
 	})
-	return
 }
 
 func (h *UserHandler) Login(ctx *gin.Context) {
 	var loginReq LoginRequest
 	if err := ctx.ShouldBindJSON(&loginReq); err != nil {
 		ctx.JSON(400, gin.H{"error": "Invalid request"})
+		return
 	}
 
-	token, err := h.repo.Login(loginReq.Username, loginReq.Password)
+	token, err := h.repo.Login(loginReq.Email, loginReq.Password)
 	if err != nil {
 		ctx.JSON(401, gin.H{"error": err.Error()})
 		return
@@ -66,7 +67,6 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (h *UserHandler) GetUserByID(ctx *gin.Context) {
-
 	idParam := ctx.Param("id")
 
 	id, err := strconv.Atoi(idParam)
@@ -83,4 +83,14 @@ func (h *UserHandler) GetUserByID(ctx *gin.Context) {
 	}
 
 	ctx.JSON(200, gin.H{"message": "User retrieved successfully", "user": user})
+}
+
+func (h *UserHandler) GetAllUsers(ctx *gin.Context) {
+	users, err := h.repo.GetAllUsers()
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": "Failed to retrieve users"})
+		return
+	}
+
+	ctx.JSON(200, gin.H{"message": "Users retrieved successfully", "users": users})
 }
