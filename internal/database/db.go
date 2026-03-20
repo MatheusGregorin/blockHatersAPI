@@ -41,8 +41,4 @@ func Connect() {
 		log.Fatal("Falha ao rodar a migração: ", err)
 	}
 	fmt.Println("Migração do banco de dados concluída com sucesso!")
-
-	var users []models.User
-	DB.Find(&users)
-	fmt.Println(users)
 }
