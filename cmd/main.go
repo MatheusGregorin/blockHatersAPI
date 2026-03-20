@@ -28,7 +28,7 @@ func main() {
 
 	// Rate limiter configuration
 	rate := limiter.Rate{
-		Period: 5 * time.Second, // Período de tempo para o qual a taxa é calculada
+		Period: 1 * time.Second, // Período de tempo para o qual a taxa é calculada
 		Limit:  3,               // Qtd requisições permitidas por período
 	}
 	store := memory.NewStore()
